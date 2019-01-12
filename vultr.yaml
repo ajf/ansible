@@ -1,0 +1,47 @@
+- hosts: vultr
+  become: yes
+  become_method: doas
+
+  tasks:
+    - name: Install Packages
+      openbsd_pkg: name="{{ item }}" state=present
+      with_items:
+        - git
+        - ruby-2.5.1
+        - vim--no_x11-python3
+        - zsh
+    - name: Stop Services
+      service: name="{{ item }}" state=stopped enabled=no
+      with_items:
+        - smtpd
+        - sndiod
+    - name: Change andrew's shell to zsh
+      user:
+        name: andrew
+        shell: /usr/local/bin/zsh
+    - name: Install rake
+      gem:
+          executable: /usr/local/bin/gem25
+          name: rake
+    - name: Update pf config
+      copy:
+        src=pf-vultr.conf
+        dest=/etc/pf.conf
+        owner=root
+        group=wheel
+        mode=0600
+        backup=yes
+      notify:
+        - restart firewall
+    - name: sysctl config
+      copy:
+        src=sysctl.conf
+        dest=/etc/sysctl.conf
+        owner=root
+        group=wheel
+        mode=0644
+        backup=yes
+
+  handlers:
+    - name: restart firewall
+      command: pfctl -F all -f /etc/pf.conf

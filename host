@@ -1,0 +1,5 @@
+[routers]
+fe80::dc21:4806:dcaa:44ef%en0 ansible_python_interpreter=/usr/local/bin/python2.7
+
+[vultr]
+2001:19f0:ac01:fc4:5400:1ff:fecd:d318 ansible_python_interpreter=/usr/local/bin/python2.7

@@ -1,0 +1,146 @@
+- hosts: routers
+  become: yes
+  become_method: doas
+
+  tasks:
+    - name: Install Packages
+      openbsd_pkg: name="{{ item }}" state=present
+      with_items:
+        - dhcpcd
+        - git
+        - kea
+        - ruby-2.5.1
+        - vim--no_x11-python3
+        - avahi
+        - zsh
+        - knot
+    - name: Stop Services
+      service: name="{{ item }}" state=stopped enabled=no
+      with_items:
+        - slaacd
+        - smtpd
+        - sndiod
+    - name: Start services
+      service: name="{{ item }}" state=started enabled=yes
+      with_items:
+        - dhcpcd
+        - rad
+        - unbound
+        - kea
+        - knot
+    - name: Change andrew's shell to zsh
+      user:
+        name: andrew
+        shell: /usr/local/bin/zsh
+    - name: Install rake
+      gem:
+          executable: /usr/local/bin/gem25
+          name: rake
+    - name: Update pf config
+      copy:
+        src=pf.conf
+        dest=/etc/pf.conf
+        owner=root
+        group=wheel
+        mode=0600
+        backup=yes
+      notify:
+        - restart firewall
+    - name: Update kea config
+      copy:
+        src=kea.conf
+        dest=/etc/kea/kea.conf
+        owner=root
+        group=wheel
+        mode=0640
+        backup=yes
+      notify:
+        - restart kea
+    - name: Update keactrl config
+      copy:
+        src=keactrl.conf
+        dest=/etc/kea/keactrl.conf
+        owner=root
+        group=wheel
+        mode=0640
+        backup=yes
+      notify:
+        - restart kea
+    - name: Update rad config
+      copy:
+        src=rad.conf
+        dest=/etc/rad.conf
+        owner=root
+        group=wheel
+        mode=0644
+        backup=yes
+      notify:
+        - restart rad
+    - name: sysctl config
+      copy:
+        src=sysctl.conf
+        dest=/etc/sysctl.conf
+        owner=root
+        group=wheel
+        mode=0644
+        backup=yes
+    - name: interface config file for em1
+      copy:
+        src=hostname.em1
+        dest=/etc/hostname.em1
+        owner=root
+        group=wheel
+        mode=0640
+        backup=yes
+    - name: interface config file for em0
+      copy:
+        src=hostname.em0
+        dest=/etc/hostname.em0
+        owner=root
+        group=wheel
+        mode=0640
+        backup=yes
+    - name: dhcpcd config
+      copy:
+        src=dhcpcd.conf
+        dest=/etc/dhcpcd.conf
+        owner=root
+        group=wheel
+        mode=0644
+        backup=yes
+      notify:
+        - restart dhcpcd
+    - name: unbound config
+      copy:
+          src=unbound.conf
+          dest=/var/unbound/etc/unbound.conf
+          owner=root
+          group=wheel
+          mode=0644
+          backup=yes
+      notify:
+          - restart unbound
+    - name: knot configuration
+      copy:
+          src=knot.conf
+          dest=/etc/knot/knot.conf
+          owner=root
+          group=wheel
+          mode=0644
+          backup=yes
+      notify:
+          - restart knot
+
+  handlers:
+    - name: restart firewall
+      command: pfctl -F all -f /etc/pf.conf
+    - name: restart rad
+      command: rcctl restart rad
+    - name: restart kea
+      command: rcctl restart kea
+    - name: restart dhcpcd
+      command: rcctl reload dhcpcd
+    - name: restart unbound
+      command: rcctl reload unbound
+    - name: restart knot
+      command: rcctl restart knot
